@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>小说转视频提示词 · H3 / Seedance 2.5</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f5f6f8;
+      --panel: #ffffff;
+      --text: #1f2328;
+      --muted: #6b7280;
+      --line: #d8dde3;
+      --accent: #2563eb;
+      --accent-2: #7c3aed;
+      --danger: #b42318;
+      --code-bg: #101418;
+      --code-text: #e6edf3;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0f1115;
+        --panel: #171a20;
+        --text: #e6edf3;
+        --muted: #98a2b3;
+        --line: #2c313a;
+        --accent: #60a5fa;
+        --accent-2: #a78bfa;
+        --danger: #fda29b;
+        --code-bg: #05070a;
+        --code-text: #e6edf3;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+      line-height: 1.6;
+    }
+    main { width: min(960px, 100% - 32px); margin: 0 auto; padding: 32px 0 64px; }
+    h1 { font-size: 26px; margin: 0 0 8px; }
+    .subtitle { color: var(--muted); margin: 0 0 24px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 18px;
+      box-shadow: 0 8px 30px rgba(0,0,0,.05);
+    }
+    .card h2 { margin: 0 0 12px; font-size: 16px; }
+    label { display: block; font-size: 13px; color: var(--muted); margin: 12px 0 6px; }
+    input, textarea, select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--bg);
+      color: var(--text);
+      font: inherit;
+    }
+    textarea { min-height: 220px; resize: vertical; }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; }
+    .model-btn {
+      flex: 1;
+      min-width: 150px;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--bg);
+      color: var(--text);
+      cursor: pointer;
+      font: inherit;
+    }
+    .model-btn.active {
+      border-color: var(--accent);
+      background: color-mix(in srgb, var(--accent) 14%, var(--panel));
+      font-weight: 600;
+    }
+    .model-btn.seedance.active { border-color: var(--accent-2); background: color-mix(in srgb, var(--accent-2) 14%, var(--panel)); }
+    button.primary {
+      margin-top: 14px;
+      width: 100%;
+      padding: 12px 14px;
+      border: 0;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      color: #fff;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    button.primary:disabled { opacity: .55; cursor: not-allowed; }
+    .muted { color: var(--muted); font-size: 13px; }
+    .status { margin: 12px 0; font-size: 14px; color: var(--muted); min-height: 22px; }
+    .status.error { color: var(--danger); }
+    details { margin-top: 16px; }
+    summary { cursor: pointer; color: var(--muted); font-size: 14px; }
+    pre {
+      background: var(--code-bg);
+      color: var(--code-text);
+      border-radius: 12px;
+      padding: 16px;
+      overflow: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+      min-height: 120px;
+      font-size: 14px;
+    }
+    .toolbar { display: flex; justify-content: flex-end; margin-bottom: 8px; }
+    .toolbar button {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 6px 12px;
+      cursor: pointer;
+      font: inherit;
+    }
+    .hint { color: var(--muted); font-size: 13px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>小说转视频提示词</h1>
+    <p class="subtitle">贴一段小说 → 像导演一样分镜 → 复制到 H3 / Seedance 2.5 跑视频</p>
+
+    <div class="grid">
+      <section class="card">
+        <h2>输入</h2>
+        <div class="row" id="modelSwitch">
+          <button type="button" class="model-btn active" data-model="H3">MiniMax H3</button>
+          <button type="button" class="model-btn seedance" data-model="Seedance 2.5">即梦 Seedance 2.5</button>
+        </div>
+
+        <label for="novel">小说原文（自己分段）</label>
+        <textarea id="novel" placeholder="红衣女子独立城楼之上，夜风拂动衣袂，她望向远方群山，轻声道：“该回去了。”"></textarea>
+
+        <button class="primary" id="generate" type="button">生成视频提示词</button>
+        <div class="status" id="status"></div>
+      </section>
+
+      <section class="card">
+        <h2>输出</h2>
+        <div class="toolbar">
+          <button id="copy" type="button">复制</button>
+        </div>
+        <pre id="output">结果会显示在这里。</pre>
+      </section>
+    </div>
+
+    <details>
+      <summary>LLM API 设置（保存在本地浏览器）</summary>
+      <div class="card" style="margin-top:12px;">
+        <label for="apiKey">API Key</label>
+        <input id="apiKey" type="password" autocomplete="off" placeholder="sk-...">
+
+        <label for="apiBase">API 地址</label>
+        <input id="apiBase" type="url" placeholder="https://api.openai.com/v1">
+
+        <label for="modelName">模型名称</label>
+        <input id="modelName" type="text" placeholder="gpt-4o-mini">
+
+        <p class="hint">调用 OpenAI 兼容的 <code>/chat/completions</code>。H3 / Seedance 是输出格式，不要求用它们的 API；用任意 LLM 生成提示词即可。API Key 仅存 <code>localStorage</code>。</p>
+      </div>
+    </details>
+  </main>
+
+  <script>
+    const SYSTEM_PROMPT = `你是小说转视频的分镜导演。用户会给你一段已经分好段的小说原文，以及目标视频模型。
+
+你的任务不是扩写小说，而是把这段文字导演成可拍摄的视频提示词：
+- 判断这段视频多长、切几个镜头、每个镜头几秒。
+- 给每个镜头写画面、景别和运镜。
+- 区分对话台词、旁白、内心独白和环境空镜。
+- 每个镜头写音效，不要写音乐。
+
+规则：
+1. 对话台词必须保持用户原文，一个字都不改写。
+2. 旁白标注为：旁白：xxx
+3. 内心独白标注为：（内心）xxx
+4. 纯环境空镜不标台词，直接写画面。
+5. 不写画风、色调、渲染词；视觉一致性靠参考图，没有参考图时只写中性画面事实。
+6. 不判断参考图是否存在，需要哪个角色/场景就直接标注。
+7. 只写音效，不写背景音乐。
+8. 用户给的是分段文本；如果一段文字明显超过单条视频可承载的信息量，不要硬拆，先提示用户把这段再分短一点。
+9. 默认按短片段处理：4-12 秒、1-4 个镜头；对话多时适当增加镜头，但时长仍以内容密度为准。
+10. 运镜写清楚但克制，通常每个镜头 1-2 种运镜。
+
+输出时严格使用目标模型对应的格式，只输出提示词正文，不要输出额外解释。`;
+
+    const FORMAT_GUIDES = {
+      'H3': `目标模型：MiniMax H3（纯文本 T2VA，海螺官网 / MiniMax API）
+输出中文自然语言，不要写 [Shot N] 字段，不要写 @图片N：
+{一句话总概念}。
+
+时长：{Xs}，24FPS。
+
+前2秒：{立即发生的事件，不是空镜}。
+视觉：{主体 + 动作 + 环境 + 光影，按时间顺序写}。
+镜头：{只用官方运镜词，1-2 个镜头}。
+声音：环境音{具体环境声}；动作音{具体动作声}；{无配乐 / 配乐{乐器 + 速度 + 力度变化，不写情绪词}}。
+台词保持原文。`,
+
+      'Seedance 2.5': `目标模型：即梦 Seedance 2.5
+输出官方四段式，时间戳分段：
+@角色 @场景（语义占位；用户上传素材后替换为 @图片1 等）
+
+一句话概括：[主体]在[地点][事件]。
+
+0-Xs：[画面 + 动作 + 镜头]
+X-Ys：[画面 + 动作 + 镜头]
+（台词保持原文嵌入对应时间区间）
+
+全局补充：[机位、环境、灯光、声音、人物一致性；不写画风/色调；不出现文字和水印]
+音效：[具体音效，逗号分隔]
+时长：约Xs。`
+    };
+
+    const $ = (id) => document.getElementById(id);
+    const store = {
+      get(key, fallback = '') { try { return localStorage.getItem(key) ?? fallback; } catch { return fallback; } },
+      set(key, value) { try { localStorage.setItem(key, value); } catch {} }
+    };
+
+    let selectedModel = 'H3';
+
+    function saveSettings() {
+      store.set('nv_apiKey', $('apiKey').value.trim());
+      store.set('nv_apiBase', $('apiBase').value.trim());
+      store.set('nv_modelName', $('modelName').value.trim());
+    }
+
+    function loadSettings() {
+      $('apiKey').value = store.get('nv_apiKey');
+      $('apiBase').value = store.get('nv_apiBase', 'https://api.openai.com/v1');
+      $('modelName').value = store.get('nv_modelName', 'gpt-4o-mini');
+    }
+
+    function setStatus(message, isError = false) {
+      $('status').textContent = message;
+      $('status').classList.toggle('error', isError);
+    }
+
+    document.querySelectorAll('#modelSwitch .model-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('#modelSwitch .model-btn').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        selectedModel = btn.dataset.model;
+      });
+    });
+
+    $('generate').addEventListener('click', async () => {
+      const apiKey = $('apiKey').value.trim();
+      const apiBase = $('apiBase').value.trim().replace(/\/+$/, '');
+      const modelName = $('modelName').value.trim();
+      const novel = $('novel').value.trim();
+
+      if (!apiKey || !apiBase || !modelName) {
+        setStatus('请先展开“LLM API 设置”并填写 API Key、API 地址、模型名称。', true);
+        return;
+      }
+      if (!novel) {
+        setStatus('请先粘贴一段小说原文。', true);
+        return;
+      }
+
+      saveSettings();
+      $('generate').disabled = true;
+      setStatus('生成中…');
+
+      const userMessage = `${FORMAT_GUIDES[selectedModel]}\n\n小说原文：\n${novel}`;
+
+      try {
+        const response = await fetch(`${apiBase}/chat/completions`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            model: modelName,
+            temperature: 0.4,
+            messages: [
+              { role: 'system', content: SYSTEM_PROMPT },
+              { role: 'user', content: userMessage }
+            ]
+          })
+        });
+
+        if (!response.ok) {
+          const detail = await response.text();
+          throw new Error(`HTTP ${response.status}：${detail.slice(0, 300)}`);
+        }
+
+        const data = await response.json();
+        const content = data?.choices?.[0]?.message?.content;
+        if (!content) throw new Error('响应里没有可用的生成结果。');
+
+        $('output').textContent = content.trim();
+        setStatus('生成完成。');
+      } catch (err) {
+        console.error(err);
+        setStatus('调用失败：' + err.message + '（浏览器直连需服务端允许 CORS）', true);
+      } finally {
+        $('generate').disabled = false;
+      }
+    });
+
+    $('copy').addEventListener('click', async () => {
+      const text = $('output').textContent;
+      if (!text || text === '结果会显示在这里。') return;
+      try {
+        await navigator.clipboard.writeText(text);
+        setStatus('已复制。');
+      } catch {
+        const range = document.createRange();
+        range.selectNodeContents($('output'));
+        const selection = getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+        document.execCommand('copy');
+        selection.removeAllRanges();
+        setStatus('已复制。');
+      }
+    });
+
+    ['apiKey', 'apiBase', 'modelName'].forEach((id) => {
+      $(id).addEventListener('change', saveSettings);
+    });
+
+    loadSettings();
+  </script>
+</body>
+</html>
